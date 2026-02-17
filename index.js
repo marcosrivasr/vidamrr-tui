@@ -9,12 +9,12 @@ const DATA_FILE = path.join(process.cwd(), 'videos.json');
 
 const state = {
   mode: 'command',
+  viewScreen: 'list',
   commandInput: '',
   urlInput: '',
   videos: [],
   selectedVideo: 0,
   selectedDetail: 0,
-  focus: 'videos',
   status: 'Escribe /new o /view. /help para ver comandos.',
   busy: false,
 };
@@ -51,12 +51,13 @@ function getSelectedVideo() {
   return state.videos[index];
 }
 
-function getDetailRows(video) {
+function getComponentRows(video) {
   if (!video) return [];
   return [
     { key: 'titulo', label: 'Titulo', value: video.title },
     { key: 'thumbnail', label: 'Thumbnail', value: video.thumbnail },
     { key: 'url', label: 'URL', value: video.url },
+    { key: 'string', label: 'String (JSON)', value: JSON.stringify(video) },
   ];
 }
 
@@ -66,6 +67,21 @@ function renderHeader() {
 }
 
 function renderCommands() {
+  const viewShortcuts =
+    state.viewScreen === 'components'
+      ? [
+          'Atajos en /view (componentes):',
+          '  Flechas: navegar componentes',
+          '  Enter: copiar componente',
+          '  Esc o q: volver a lista',
+        ]
+      : [
+          'Atajos en /view (lista):',
+          '  Flechas: navegar titulos',
+          '  Enter: abrir componentes',
+          '  q: salir a modo comando',
+        ];
+
   return [
     'Comandos:',
     '  /new <url>   Registrar video de YouTube',
@@ -73,15 +89,12 @@ function renderCommands() {
     '  /help        Mostrar ayuda',
     '  /quit        Salir',
     '',
-    'Atajos en /view:',
-    '  Flechas: navegar',
-    '  Tab: cambiar foco',
-    '  Enter: copiar item al portapapeles',
+    ...viewShortcuts,
   ];
 }
 
 function renderVideos() {
-  const lines = ['Videos guardados:'];
+  const lines = ['Selecciona un video:'];
   if (state.videos.length === 0) {
     lines.push('  (sin videos)');
     return lines;
@@ -89,8 +102,9 @@ function renderVideos() {
 
   state.videos.forEach((video, index) => {
     const isSelected = state.selectedVideo === index;
-    const pointer = isSelected ? (state.focus === 'videos' ? '>' : '*') : ' ';
-    lines.push(`${pointer} ${index + 1}. ${truncate(video.title, 68)}`);
+    const pointer = isSelected ? '>' : ' ';
+    const checked = isSelected ? '[x]' : '[ ]';
+    lines.push(`${pointer} ${checked} ${truncate(video.title, 74)}`);
   });
 
   return lines;
@@ -98,19 +112,20 @@ function renderVideos() {
 
 function renderDetails() {
   const video = getSelectedVideo();
-  const lines = ['Detalle:'];
+  const lines = ['Componentes del video:'];
   if (!video) {
     lines.push('  Selecciona un video con /view');
     return lines;
   }
 
-  const details = getDetailRows(video);
+  const details = getComponentRows(video);
   state.selectedDetail = Math.min(state.selectedDetail, details.length - 1);
 
   details.forEach((row, index) => {
     const isSelected = state.selectedDetail === index;
-    const pointer = isSelected ? (state.focus === 'details' ? '>' : '*') : ' ';
-    lines.push(`${pointer} ${row.label}: ${truncate(row.value, 64)}`);
+    const pointer = isSelected ? '>' : ' ';
+    const checked = isSelected ? '[x]' : '[ ]';
+    lines.push(`${pointer} ${checked} ${row.label}: ${truncate(row.value, 56)}`);
   });
 
   return lines;
@@ -129,14 +144,15 @@ function renderStatusLine() {
 
 function draw() {
   clear();
+  const viewLines =
+    state.mode === 'view' && state.viewScreen === 'components' ? renderDetails() : renderVideos();
+
   const sections = [
     renderHeader(),
     ''.padEnd(90, '='),
     ...renderCommands(),
     ''.padEnd(90, '-'),
-    ...renderVideos(),
-    ''.padEnd(90, '-'),
-    ...renderDetails(),
+    ...viewLines,
     ''.padEnd(90, '-'),
     renderInputLine(),
     renderStatusLine(),
@@ -233,7 +249,8 @@ async function registerVideo(rawUrl) {
     saveVideos();
     state.selectedVideo = state.videos.length - 1;
     state.mode = 'view';
-    state.focus = 'videos';
+    state.viewScreen = 'list';
+    state.selectedDetail = 0;
     state.status = 'Video registrado correctamente.';
   } catch (error) {
     state.status = error instanceof Error ? error.message : 'No se pudo registrar el video.';
@@ -262,11 +279,12 @@ async function executeCommand(raw) {
 
   if (command === '/view') {
     state.mode = 'view';
-    state.focus = 'videos';
+    state.viewScreen = 'list';
+    state.selectedDetail = 0;
     if (state.videos.length > 0) {
       state.selectedVideo = Math.min(state.selectedVideo, state.videos.length - 1);
     }
-    state.status = `Mostrando ${state.videos.length} video(s).`;
+    state.status = `Mostrando ${state.videos.length} video(s). Selecciona uno y presiona Enter.`;
     return;
   }
 
@@ -285,23 +303,17 @@ async function executeCommand(raw) {
   state.status = `Comando desconocido: ${command}`;
 }
 
-async function copyCurrentSelection() {
+async function copyCurrentComponent() {
   const video = getSelectedVideo();
   if (!video) {
     state.status = 'No hay video seleccionado.';
     return;
   }
 
-  if (state.focus === 'videos') {
-    await copyToClipboard(video.url);
-    state.status = 'URL del video copiada al portapapeles.';
-    return;
-  }
-
-  const details = getDetailRows(video);
+  const details = getComponentRows(video);
   const row = details[state.selectedDetail];
   if (!row) {
-    state.status = 'No hay detalle seleccionado.';
+    state.status = 'No hay componente seleccionado.';
     return;
   }
   await copyToClipboard(row.value);
@@ -313,7 +325,7 @@ function moveSelection(delta) {
     return;
   }
 
-  if (state.focus === 'videos') {
+  if (state.viewScreen === 'list') {
     if (state.videos.length === 0) return;
     const next = state.selectedVideo + delta;
     state.selectedVideo = Math.max(0, Math.min(next, state.videos.length - 1));
@@ -322,7 +334,7 @@ function moveSelection(delta) {
 
   const video = getSelectedVideo();
   if (!video) return;
-  const details = getDetailRows(video);
+  const details = getComponentRows(video);
   const next = state.selectedDetail + delta;
   state.selectedDetail = Math.max(0, Math.min(next, details.length - 1));
 }
@@ -340,7 +352,18 @@ async function onEnter() {
 
   if (state.mode === 'view') {
     try {
-      await copyCurrentSelection();
+      if (state.viewScreen === 'list') {
+        const video = getSelectedVideo();
+        if (!video) {
+          state.status = 'No hay videos para abrir.';
+          return;
+        }
+        state.viewScreen = 'components';
+        state.selectedDetail = 0;
+        state.status = `Componentes de "${truncate(video.title, 36)}".`;
+        return;
+      }
+      await copyCurrentComponent();
     } catch (error) {
       state.status = error instanceof Error ? error.message : 'Fallo al copiar al portapapeles.';
     }
@@ -383,14 +406,14 @@ function bootstrap() {
     }
 
     if (key.name === 'escape') {
+      if (state.mode === 'view' && state.viewScreen === 'components') {
+        state.viewScreen = 'list';
+        state.status = 'Volviste a la lista de videos.';
+        draw();
+        return;
+      }
       state.mode = 'command';
       state.status = 'Modo comando activo.';
-      draw();
-      return;
-    }
-
-    if (key.name === 'tab' && state.mode === 'view') {
-      state.focus = state.focus === 'videos' ? 'details' : 'videos';
       draw();
       return;
     }
@@ -420,6 +443,12 @@ function bootstrap() {
     }
 
     if (key.name === 'q' && state.mode === 'view') {
+      if (state.viewScreen === 'components') {
+        state.viewScreen = 'list';
+        state.status = 'Volviste a la lista de videos.';
+        draw();
+        return;
+      }
       state.mode = 'command';
       state.status = 'Modo comando activo.';
       draw();
