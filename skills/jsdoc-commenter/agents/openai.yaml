@@ -1,0 +1,4 @@
+interface:
+  display_name: "JSDoc Commenter"
+  short_description: "Generate JSDoc blocks for JS/TS functions"
+  default_prompt: "Use $jsdoc-commenter to find undocumented functions and add accurate JSDoc comments."
