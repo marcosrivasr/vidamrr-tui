@@ -5,7 +5,7 @@ description: Generar y aplicar comentarios JSDoc para funciones JavaScript/TypeS
 
 # JSDoc Commenter
 
-Documentar funciones con bloques JSDoc claros y consistentes.
+Documentar funciones con bloques JSDoc claros y consistentes para mejorar calidad.
 
 ## Workflow
 
