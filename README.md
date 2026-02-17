@@ -23,9 +23,10 @@ npm start
 
 ## Atajos en vista
 
-- `Flecha arriba/abajo`: navegar
-- `Tab`: cambiar foco entre lista y detalle
-- `Enter`: copiar URL/titulo/thumbnail segun item seleccionado
-- `Esc` o `q`: volver al modo comando
+- `Flecha arriba/abajo`: navegar seleccion
+- `Enter` en lista: abrir componentes del video seleccionado
+- `Enter` en componentes: copiar el valor seleccionado al portapapeles
+- `Esc` o `q` en componentes: volver a la lista de videos
+- `q` en lista: volver al modo comando
 
 Los videos se guardan en `videos.json` en la raiz del proyecto.

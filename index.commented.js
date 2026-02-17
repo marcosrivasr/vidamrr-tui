@@ -19,6 +19,11 @@ const state = {
   busy: false,
 };
 
+/**
+ * Describe loadVideos.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function loadVideos() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
@@ -32,25 +37,53 @@ function loadVideos() {
   }
 }
 
+/**
+ * Describe saveVideos.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function saveVideos() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(state.videos, null, 2));
 }
 
+/**
+ * Describe truncate.
+ *
+ * @param {string} text Describe text.
+ * @param {unknown} [max] Describe max.
+ * @returns {unknown} Describe returned value.
+ */
 function truncate(text, max = 74) {
   if (!text) return '';
   return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
+/**
+ * Describe clear.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function clear() {
   process.stdout.write('\x1Bc');
 }
 
+/**
+ * Describe getSelectedVideo.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function getSelectedVideo() {
   if (state.videos.length === 0) return null;
   const index = Math.max(0, Math.min(state.selectedVideo, state.videos.length - 1));
   return state.videos[index];
 }
 
+/**
+ * Describe getComponentRows.
+ *
+ * @param {unknown} video Describe video.
+ * @returns {unknown} Describe returned value.
+ */
 function getComponentRows(video) {
   if (!video) return [];
   return [
@@ -61,11 +94,21 @@ function getComponentRows(video) {
   ];
 }
 
+/**
+ * Describe renderHeader.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderHeader() {
   const busyText = state.busy ? ' [PROCESANDO]' : '';
   return `${APP_NAME}${busyText}`;
 }
 
+/**
+ * Describe renderCommands.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderCommands() {
   const viewShortcuts =
     state.viewScreen === 'components'
@@ -93,6 +136,11 @@ function renderCommands() {
   ];
 }
 
+/**
+ * Describe renderVideos.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderVideos() {
   const lines = ['Selecciona un video:'];
   if (state.videos.length === 0) {
@@ -110,6 +158,11 @@ function renderVideos() {
   return lines;
 }
 
+/**
+ * Describe renderDetails.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderDetails() {
   const video = getSelectedVideo();
   const lines = ['Componentes del video:'];
@@ -131,6 +184,11 @@ function renderDetails() {
   return lines;
 }
 
+/**
+ * Describe renderInputLine.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderInputLine() {
   if (state.mode === 'prompt_url') {
     return `URL YouTube: ${state.urlInput}`;
@@ -138,10 +196,20 @@ function renderInputLine() {
   return `Input: ${state.commandInput}`;
 }
 
+/**
+ * Describe renderStatusLine.
+ *
+ * @returns {unknown} Describe returned value.
+ */
 function renderStatusLine() {
   return `Estado: ${state.status}`;
 }
 
+/**
+ * Describe draw.
+ *
+ * @returns {Promise<unknown>} Describe returned value.
+ */
 function draw() {
   clear();
   const viewLines =
@@ -160,6 +228,12 @@ function draw() {
   process.stdout.write(`${sections.join('\n')}\n`);
 }
 
+/**
+ * Describe fetchYouTubeMeta.
+ *
+ * @param {string} url Describe url.
+ * @returns {Promise<unknown>} Describe returned value.
+ */
 async function fetchYouTubeMeta(url) {
   const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
   const controller = new AbortController();
@@ -183,6 +257,12 @@ async function fetchYouTubeMeta(url) {
   }
 }
 
+/**
+ * Describe copyToClipboard.
+ *
+ * @param {unknown} value Describe value.
+ * @returns {unknown} Describe returned value.
+ */
 function copyToClipboard(value) {
   return new Promise((resolve, reject) => {
     let command = null;
@@ -208,6 +288,12 @@ function copyToClipboard(value) {
   });
 }
 
+/**
+ * Describe normalizeYoutubeUrl.
+ *
+ * @param {string} url Describe url.
+ * @returns {unknown} Describe returned value.
+ */
 function normalizeYoutubeUrl(url) {
   try {
     const parsed = new URL(url);
@@ -220,6 +306,11 @@ function normalizeYoutubeUrl(url) {
   }
 }
 
+/**
+ * Describe registerVideo.
+ *
+ * @param {string} rawUrl Describe rawUrl.
+ */
 async function registerVideo(rawUrl) {
   const url = normalizeYoutubeUrl(rawUrl.trim());
   if (!url) {
@@ -259,6 +350,11 @@ async function registerVideo(rawUrl) {
   }
 }
 
+/**
+ * Describe executeCommand.
+ *
+ * @param {unknown} raw Describe raw.
+ */
 async function executeCommand(raw) {
   const input = raw.trim();
   if (!input) {
@@ -303,6 +399,10 @@ async function executeCommand(raw) {
   state.status = `Comando desconocido: ${command}`;
 }
 
+/**
+ * Describe copyCurrentComponent.
+ *
+ */
 async function copyCurrentComponent() {
   const video = getSelectedVideo();
   if (!video) {
@@ -320,6 +420,11 @@ async function copyCurrentComponent() {
   state.status = `${row.label} copiado al portapapeles.`;
 }
 
+/**
+ * Describe moveSelection.
+ *
+ * @param {unknown} delta Describe delta.
+ */
 function moveSelection(delta) {
   if (state.mode !== 'view') {
     return;
@@ -339,6 +444,10 @@ function moveSelection(delta) {
   state.selectedDetail = Math.max(0, Math.min(next, details.length - 1));
 }
 
+/**
+ * Describe onEnter.
+ *
+ */
 async function onEnter() {
   if (state.busy) return;
 
@@ -375,6 +484,11 @@ async function onEnter() {
   await executeCommand(command);
 }
 
+/**
+ * Describe appendInput.
+ *
+ * @param {unknown} ch Describe ch.
+ */
 function appendInput(ch) {
   if (!ch || ch.length !== 1) return;
   if (state.mode === 'prompt_url') {
@@ -384,6 +498,10 @@ function appendInput(ch) {
   state.commandInput += ch;
 }
 
+/**
+ * Describe backspaceInput.
+ *
+ */
 function backspaceInput() {
   if (state.mode === 'prompt_url') {
     state.urlInput = state.urlInput.slice(0, -1);
@@ -392,6 +510,10 @@ function backspaceInput() {
   state.commandInput = state.commandInput.slice(0, -1);
 }
 
+/**
+ * Describe bootstrap.
+ *
+ */
 function bootstrap() {
   state.videos = loadVideos();
 
